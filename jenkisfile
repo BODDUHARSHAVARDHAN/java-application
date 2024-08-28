@@ -1,0 +1,81 @@
+pipeline {
+    agent any
+
+    environment {
+        DEPLOY_DIR = "/path/to/deploy/dir"
+        SERVER_IP = "your.server.ip"
+        SSH_USER = "your_ssh_user"
+        APP_NAME = "java-deploy-pipeline"
+        MAVEN_HOME = tool 'Maven 3.6.3'
+    }
+
+    stages {
+        stage('Checkout Code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/BODDUHARSHAVARDHAN/java-application.git'
+            }
+        }
+
+        stage('Code Scan') {
+            steps {
+                script {
+                    withSonarQubeEnv('SonarQube') {
+                        sh "${MAVEN_HOME}/bin/mvn sonar:sonar"
+                    }
+                }
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh "${MAVEN_HOME}/bin/mvn clean package -DskipTests=false"
+            }
+        }
+
+        stage('Unit Tests') {
+            steps {
+                sh "${MAVEN_HOME}/bin/mvn test"
+            }
+        }
+
+        stage('Integration Tests') {
+            steps {
+                sh "${MAVEN_HOME}/bin/mvn verify"
+            }
+        }
+
+        stage('Deploy Version 2') {
+            steps {
+                script {
+                    def deploySuccess = false
+                    try {
+                        sh "scp target/${APP_NAME}.jar ${SSH_USER}@${SERVER_IP}:${DEPLOY_DIR}/${APP_NAME}_v2.jar"
+                        sh "ssh ${SSH_USER}@${SERVER_IP} 'cd ${DEPLOY_DIR} && ./restart.sh ${APP_NAME}_v2.jar'"
+                        sh "curl -f http://${SERVER_IP}:your_port/health"
+                        deploySuccess = true
+                    } catch (Exception e) {
+                        echo "Deployment failed, rolling back..."
+                    }
+                    
+                    if (!deploySuccess) {
+                        sh "ssh ${SSH_USER}@${SERVER_IP} 'cd ${DEPLOY_DIR} && ./rollback.sh'"
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
+        }
+
+        success {
+            echo 'Deployment completed successfully!'
+        }
+
+        failure {
+            echo 'Pipeline failed!'
+        }
+    }
+}
