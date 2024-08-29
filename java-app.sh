@@ -1,4 +1,6 @@
-sudo tee /etc/systemd/system/java-app.service > /dev/null <<EOL
+
+#!/bin/bash
+sudo -n tee /etc/systemd/system/java-app.service > /dev/null <<EOL
 [Unit]
 Description=Java Application Service
 After=network.target
@@ -11,3 +13,7 @@ Restart=always
 [Install]
 WantedBy=multi-user.target
 EOL
+
+sudo -n systemctl daemon-reload
+sudo -n systemctl enable java-app.service
+sudo -n systemctl start java-app.service
