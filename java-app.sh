@@ -6,7 +6,7 @@ Description=Java Application Service
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/java -jar /opt/java-app/java-deploy-pipeline-1.0-SNAPSHOT.jar
+ExecStart=/usr/bin/java -jar /opt/java-app/demo-0.0.1-SNAPSHOT.jar
 User=harsha
 Restart=always
 
